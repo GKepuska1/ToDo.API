@@ -1,22 +1,32 @@
-# TODO API with CQRS Pattern
+﻿# TODO API with CQRS Pattern
 
 ## Architecture Overview
 
-This solution implements a clean CRUD API for TODO items using the CQRS (Command Query Responsibility Segregation) pattern.
+This solution implements a clean CRUD API for TODO items using the CQRS pattern with DTOs and AutoMapper.
 
 ### Project Structure
 
-- **ToDo.Domain** - Domain entities
-  - `ToDoItem.cs` - Main TODO entity with properties: Id, Title, Description, IsCompleted, CreatedAt, CompletedAt, UpdatedAt
+- **ToDo.Domain** - Domain entities and DTOs
+  - `Entities/ToDo/ToDoItem.cs` - Main TODO entity with properties: Id, Title, Description, IsCompleted, CreatedAt, CompletedAt, UpdatedAt
+  - `Dtos/ToDoDto.cs` - Data Transfer Objects:
+    - `ToDoDtoGet` - Used for returning data to clients
+    - `ToDoDtoCreate` - Used for creating new TODO items
+    - `ToDoDtoUpdate` - Used for updating existing TODO items
 
-- **ToDo.Core** - Application core with queries and DbContext
-  - `ToDoDbContext.cs` - EF Core DbContext with InMemory database
-  - `Queries/ToDoQueries.cs` - Query definitions (GetAll, GetById, GetCompleted, GetPending)
-  - `Queries/ToDoQueryHandlers.cs` - Query handlers
+- **ToDo.Core** - Application core with services, queries and DbContext
+  - `Contexts/ToDoDbContext.cs` - EF Core DbContext with InMemory database
+  - `Services/ToDoService.cs` - Business logic and data access
+  - `Mappings/ToDoMappingProfile.cs` - AutoMapper configuration for entity-DTO conversion
 
-- **ToDo.Commands** - CQRS commands and handlers
-  - `ToDoCommands.cs` - Command definitions (Create, Update, Delete, Complete)
-  - `ToDoCommandHandlers.cs` - Command handlers
+- **ToDo.Commands** - CQRS commands and queries with handlers
+  - `ToDo/CreateToDoCommand.cs` - Create command and handler
+  - `ToDo/UpdateToDoCommand.cs` - Update command and handler
+  - `ToDo/DeleteToDoCommand.cs` - Delete command and handler
+  - `ToDo/CompleteToDoCommand.cs` - Complete command and handler
+  - `ToDo/Queries/GetAllToDosQuery.cs` - Query and handler for all items
+  - `ToDo/Queries/GetToDoByIdQuery.cs` - Query and handler for single item
+  - `ToDo/Queries/GetCompletedToDosQuery.cs` - Query and handler for completed items
+  - `ToDo/Queries/GetPendingToDosQuery.cs` - Query and handler for pending items
 
 - **ToDo.API** - Web API layer
   - `Controllers/ToDoController.cs` - REST API controller
@@ -24,15 +34,15 @@ This solution implements a clean CRUD API for TODO items using the CQRS (Command
 
 ## API Endpoints
 
-### Queries (GET)
-- `GET /api/todo` - Get all TODO items
-- `GET /api/todo/{id}` - Get TODO by ID
-- `GET /api/todo/completed` - Get completed TODOs
-- `GET /api/todo/pending` - Get pending TODOs
+### Queries (GET) - Returns DTOs
+- `GET /api/todo` - Get all TODO items → Returns `List<ToDoDtoGet>`
+- `GET /api/todo/{id}` - Get TODO by ID → Returns `ToDoDtoGet`
+- `GET /api/todo/completed` - Get completed TODOs → Returns `List<ToDoDtoGet>`
+- `GET /api/todo/pending` - Get pending TODOs → Returns `List<ToDoDtoGet>`
 
 ### Commands (POST/PUT/PATCH/DELETE)
-- `POST /api/todo` - Create new TODO
-- `PUT /api/todo/{id}` - Update TODO
+- `POST /api/todo` - Create new TODO (accepts `ToDoDtoCreate`)
+- `PUT /api/todo/{id}` - Update TODO (accepts `ToDoDtoUpdate`)
 - `PATCH /api/todo/{id}/complete` - Mark TODO as completed
 - `DELETE /api/todo/{id}` - Delete TODO
 
@@ -41,8 +51,9 @@ This solution implements a clean CRUD API for TODO items using the CQRS (Command
 - **.NET 10** - Latest .NET framework
 - **MediatR 12.4.1** - CQRS implementation
 - **Entity Framework Core 9.0.0** - ORM with InMemory database
+- **AutoMapper 12.0.1** - Object-to-object mapping
 - **Swashbuckle/Swagger** - API documentation
-- **C# 14.0** - Modern C# features (records, required properties)
+- **C# 14.0** - Modern C# features (but none used)
 
 ## Running the Application
 
@@ -51,26 +62,27 @@ This solution implements a clean CRUD API for TODO items using the CQRS (Command
 3. Navigate to Swagger UI (typically https://localhost:5001/swagger)
 4. Test the endpoints
 
-## CQRS Pattern Benefits
+## Architecture Benefits
 
+### CQRS Pattern
 - **Separation of Concerns** - Commands modify data, Queries read data
 - **Scalability** - Can optimize reads and writes independently
 - **Maintainability** - Clear boundaries between operations
 - **Testability** - Easy to unit test handlers
 
+### DTOs with AutoMapper
+- **API Contract Stability** - Internal entity changes don't affect API consumers
+- **Security** - Control what data is exposed to clients
+- **Flexibility** - Different representations for different operations (Get/Create/Update)
+- **Automatic Mapping** - AutoMapper eliminates manual mapping code
+
+**Command Flow:**
+1. Controller receives DTO
+2. CQRS command handler maps DTO to entity
+3. Handler calls Service with entity
+4. Service performs operation via DbContext
+5. Controller returns result
+
 ## Database
 
-Currently using **InMemory database** for development. To use a real database:
-1. Install appropriate EF Core provider (SQL Server, PostgreSQL, etc.)
-2. Update `Program.cs` to use the provider
-3. Add connection string to `appsettings.json`
-4. Run migrations
-
-## Next Steps
-
-- Add validation using FluentValidation
-- Implement authentication/authorization
-- Add pagination for list queries
-- Replace InMemory database with persistent storage
-- Add unit and integration tests
-- Implement logging and error handling middleware
+Currently using **InMemory database** for development. To use a real database
